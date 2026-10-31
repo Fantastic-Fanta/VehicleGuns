@@ -37,7 +37,9 @@ neoForge {
     runs {
         create("client") {
             client()
-            gameDirectory = rootProject.file("run")
+            gameDirectory = rootProject.file("run-client")
+            // -PdevServer=host:port joins that server straight away instead of the title screen.
+            (findProperty("devServer") as String?)?.let { programArguments.addAll("--quickPlayMultiplayer", it) }
         }
         create("server") {
             server()
