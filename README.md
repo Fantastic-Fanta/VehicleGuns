@@ -2,8 +2,7 @@
 
 Turrets for any vehicle entity. Minecraft 1.21.1, NeoForge and Fabric, Kotlin.
 
-Demos from [Lapras Ferry Lines](https://github.com/Fantastic-Fanta/LaprasFerry), where it started:
-[Blastoise](https://gyazo.com/bfa89033004447d7f4f96d74b3f3dfc9) and [Lapras](https://gyazo.com/a979786342eb43d9c5dc383dbc41b148).
+Demos: [Blastoise](https://gyazo.com/bfa89033004447d7f4f96d74b3f3dfc9), [Lapras](https://gyazo.com/a979786342eb43d9c5dc383dbc41b148).
 
 ## Features
 
@@ -12,6 +11,16 @@ Demos from [Lapras Ferry Lines](https://github.com/Fantastic-Fanta/LaprasFerry),
 - Gunner mode: third-person sight camera, zoom, lock-on, HUD
 - Guard mode: auto-targets hostile mobs, no block damage
 - Explosive shells with staged burst effects
+
+## Maths
+
+- **Flight:** stepped the way Minecraft steps a projectile: `p += v`, then `v = 0.99·v − g·ŷ`. Every lay is solved by simulating this, not with closed-form parabolas.
+- **Lead:** aim, fly, then take the closest approach between the round's and the target's straight path over each tick, and shift the aim by the miss. Repeat until within 0.3 blocks.
+- **Arcs:** sweep elevation in 3° steps to find the furthest-carrying angle, then bisect to the target's distance at its height: above that angle for the lob, below it for the flat arc.
+- **Moving vehicle:** its level velocity `u` carries a round sideways by `u·(1 − 0.99ᵗ)/0.01` over `t` ticks. The aim point is pulled back by that much and re-solved 3 times.
+- **Mount:** each axis is limited in both acceleration `a` and speed. It runs at the fastest speed that can still stop in the remaining gap `d`, `(√(a² + 8a·d) − a)/2`, on top of the target's own angular rate.
+- **Tracking:** alpha-beta filter, `α = 0.5`, `β = α²/(2 − α)` (critically damped).
+- **Rider clearance:** the floor at each bearing is the lowest elevation whose barrel segment misses every rider column. The swing takes whichever way costs less traverse time plus extra lift time.
 
 ## Usage
 
@@ -47,24 +56,9 @@ Draw the turret at `turret.traverse(partial)` and `turret.elevation(partial)`.
 | `common/.../gun` | server gunnery, shared aiming |
 | `common/.../entity` | shell |
 | `common/.../client` | input, camera, sight, HUD, effects |
-| `common/.../demo` | Gun Boat |
+| `common/.../demo` | Gun Boat (Tools & Utilities tab) |
 | `neoforge`, `fabric` | loader entry points |
-
-## Build
-
-```bash
-./gradlew :neoforge:runClient
-```
-
-```bash
-./gradlew :fabric:runFabricClient
-```
-
-```bash
-./gradlew :neoforge:test
-```
-
-The demo Gun Boat is in the Tools & Utilities tab.
+| `neoforge/src/test` | ballistics unit tests |
 
 ## License
 
