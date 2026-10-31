@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+repo/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+.eclipse/
+eclipse/
+
+# Dev run directories
+run/
+run-*/
+runs/
+
+# Datagen cache
+src/generated/resources/.cache/
+
+
+# OS
+.DS_Store
+Thumbs.db
+.kotlin/
+__pycache__/
