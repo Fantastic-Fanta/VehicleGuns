@@ -11,6 +11,8 @@ Demos: [Blastoise](https://gyazo.com/bfa89033004447d7f4f96d74b3f3dfc9), [Lapras]
 - Gunner mode: third-person sight camera, zoom, lock-on, HUD
 - Guard mode: auto-targets hostile mobs, no block damage
 - Explosive shells with staged burst effects
+- Machine guns: hitscan mounts with cones, guard bursts, full auto under the gunner's key, heat, tracers
+- Magazine: a vehicle ammo store opened with the gunner's inventory key
 
 ## Maths
 
@@ -20,6 +22,7 @@ Demos: [Blastoise](https://gyazo.com/bfa89033004447d7f4f96d74b3f3dfc9), [Lapras]
 - **Moving vehicle:** its level velocity `u` carries a round sideways by `u·(1 − 0.99ᵗ)/0.01` over `t` ticks. The aim point is pulled back by that much and re-solved 3 times.
 - **Mount:** each axis is limited in both acceleration `a` and speed. It runs at the fastest speed that can still stop in the remaining gap `d`, `(√(a² + 8a·d) − a)/2`, on top of the target's own angular rate.
 - **Tracking:** alpha-beta filter, `α = 0.5`, `β = α²/(2 − α)` (critically damped).
+- **Machine guns:** each mount turns along a great circle at a fixed rate, within a cone round its rest direction. It leads by `d / bulletSpeed` ticks of tracked velocity. A bullet lands after the same delay on whatever is first on its line, up to `spread`° off the barrel, spread evenly over the cone.
 - **Rider clearance:** the floor at each bearing is the lowest elevation whose barrel segment misses every rider column. The swing takes whichever way costs less traverse time plus extra lift time.
 
 ## Usage
@@ -41,21 +44,23 @@ Draw the turret at `turret.traverse(partial)` and `turret.elevation(partial)`.
 
 | Hook | Default |
 | --- | --- |
-| `roundsLeft` / `takeRound` | unlimited ammo |
+| `magazine` | none |
+| `roundsLeft` / `takeRound` | from the magazine, else unlimited; unlimited in creative |
 | `targetRules` | guard: hostile mobs; gunner: any living thing |
 | `Turrets.wantsSteady` | true while the gunner zooms or locks on |
 
-`TurretSpec` configures geometry, mount speeds, rounds, guard and camera. `GunSettings` holds global toggles.
+`TurretSpec` configures geometry, mount speeds, rounds, guard, camera, machine guns and heat. `GunSettings` holds global toggles.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| `common/.../ballistics` | flight, lead, arcs, mount axes, tracking |
-| `common/.../api` | `ArmedVehicle`, `Turret`, `TurretSpec`, `TargetRules` |
-| `common/.../gun` | server gunnery, shared aiming |
-| `common/.../entity` | shell |
-| `common/.../client` | input, camera, sight, HUD, effects |
+| `common/.../ballistics` | flight, lead, arcs, mount axes, tracking, vehicle frame |
+| `common/.../api` | `ArmedVehicle`, `Turret`, `TurretSpec`, `TargetRules`, `Magazine` |
+| `common/.../gun` | server gunnery, machine guns, shared aiming |
+| `common/.../entity` | shell, damage source |
+| `common/.../menu` | magazine menu |
+| `common/.../client` | input, camera, sight, HUD, tracers, effects, magazine screen |
 | `common/.../demo` | Gun Boat (Tools & Utilities tab) |
 | `neoforge`, `fabric` | loader entry points |
 | `neoforge/src/test` | ballistics unit tests |

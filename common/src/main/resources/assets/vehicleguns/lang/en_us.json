@@ -7,5 +7,10 @@
   "key.categories.vehicleguns": "Vehicle Guns",
   "key.vehicleguns.lock": "Lock on target",
   "message.vehicleguns.hint": "Attack fires, use zooms, %s locks on",
-  "message.vehicleguns.no_rounds": "No rounds"
+  "message.vehicleguns.no_rounds": "No rounds",
+  "death.attack.vehicleguns.bullet": "%1$s was shot",
+  "death.attack.vehicleguns.bullet.named": "%1$s was shot by %2$s",
+  "key.vehicleguns.machine_guns": "Fire machine guns",
+  "message.vehicleguns.hint_machine_guns": "Attack fires, use zooms, %s locks on, %s machine guns",
+  "container.vehicleguns.magazine": "Magazine"
 }

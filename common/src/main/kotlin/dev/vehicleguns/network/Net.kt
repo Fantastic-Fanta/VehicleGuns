@@ -38,6 +38,7 @@ object Net {
     val SERVERBOUND: List<Serverbound<*>> = listOf(
         Serverbound(GunFirePayload.TYPE, GunFirePayload.CODEC) { p, player -> Turrets.fireByGunner(player, p.vehicle) },
         Serverbound(GunAimPayload.TYPE, GunAimPayload.CODEC) { p, player -> Turrets.aimByGunner(player, p.vehicle, Vec3(p.x, p.y, p.z)) },
+        Serverbound(GunMachinePayload.TYPE, GunMachinePayload.CODEC) { p, player -> Turrets.machineGunByGunner(player, p.vehicle, Vec3(p.x, p.y, p.z)) },
         Serverbound(GunSteadyPayload.TYPE, GunSteadyPayload.CODEC) { p, player -> Turrets.steadyByGunner(player, p.vehicle, p.steady) },
     )
 }

@@ -12,6 +12,7 @@
     "client.ItemInHandRendererGunnerMixin",
     "client.MinecraftGunnerMixin",
     "client.MouseHandlerGunnerMixin",
+    "client.MultiPlayerGameModeGunnerMixin",
     "client.OptionsGunnerMixin"
   ],
   "injectors": {

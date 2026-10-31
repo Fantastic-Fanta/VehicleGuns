@@ -11,6 +11,7 @@ import dev.vehicleguns.gun.Turrets
 import dev.vehicleguns.network.GunAimPayload
 import dev.vehicleguns.network.GunFirePayload
 import dev.vehicleguns.network.GunHitPayload
+import dev.vehicleguns.network.GunMachinePayload
 import dev.vehicleguns.network.GunSteadyPayload
 import dev.vehicleguns.network.Net
 import net.minecraft.client.CameraType
@@ -23,6 +24,7 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.entity.projectile.ProjectileUtil
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.AABB
@@ -43,6 +45,13 @@ import org.lwjgl.glfw.GLFW
 object GunnerClient {
     @JvmField
     val LOCK_KEY = KeyMapping("key.vehicleguns.lock", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, "key.categories.vehicleguns")
+
+    /** Held, the machine guns turn to the crosshair and fire full auto ([machineGunKey]). */
+    @JvmField
+    val MACHINE_GUN_KEY = KeyMapping("key.vehicleguns.machine_guns", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, "key.categories.vehicleguns")
+
+    /** Whether the machine guns' key is held now, for the sight. */
+    internal var machineGunsHeld = false
 
     /** The vehicle the local player is gunner of, or null. */
     @JvmStatic
@@ -344,6 +353,32 @@ object GunnerClient {
         if (wasKept && !kept && turret.shotsFired == pulledShots && !triggerHeld) refuse()
         wasKept = kept
         buttons(vehicle)
+        machineGunKey(vehicle, player, level)
+    }
+
+    /**
+     * The machine guns' key, held: said to the server every tick with where the crosshair is (the first creature a
+     * bullet may hit, at its body, else the first block or the water, else far out along it); locked on, the locked
+     * target's body where it will be when a bullet gets there.
+     */
+    private fun machineGunKey(vehicle: ArmedVehicle, player: Player, level: Level) {
+        val specs = vehicle.turretSpec.machineGuns
+        machineGunsHeld = specs.isNotEmpty() && MACHINE_GUN_KEY.isDown && Minecraft.getInstance().screen == null
+        if (!machineGunsHeld || vehicle.turret.overheated) return
+        val ship = vehicle.entity
+        val at = locked?.let { target ->
+            val body = target.boundingBox.center
+            body.add(lockedWay.scale(body.distanceTo(ship.position()) / specs[0].bulletSpeed))
+        } ?: run {
+            val eye = camera(vehicle, player.yRot, player.xRot, 1f)
+            val end = eye.add(player.lookAngle.scale(Aiming.SIGHT_RANGE))
+            val block = level.clip(ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, player))
+            val blockEnd = if (block.type == HitResult.Type.MISS) end else block.location
+            ProjectileUtil.getEntityHitResult(level, player, eye, blockEnd, AABB(eye, blockEnd).inflate(1.0)) {
+                it.isPickable && it !== ship && it.rootVehicle !== ship && vehicle.targetRules.gunnerMayHit(it)
+            }?.location ?: blockEnd
+        }
+        Net.toServer(GunMachinePayload(ship.id, at.x, at.y, at.z))
     }
 
     /** The aim, sent as it moves and at least twice a second: the server lays on what this client's sight is on. */
@@ -362,7 +397,9 @@ object GunnerClient {
             viewBefore = mc.options.cameraType
             mc.options.cameraType = CameraType.FIRST_PERSON
         }
-        player.displayClientMessage(Component.translatable("message.vehicleguns.hint", LOCK_KEY.translatedKeyMessage), true)
+        val hint = if (vehicle.turretSpec.machineGuns.isEmpty()) Component.translatable("message.vehicleguns.hint", LOCK_KEY.translatedKeyMessage)
+            else Component.translatable("message.vehicleguns.hint_machine_guns", LOCK_KEY.translatedKeyMessage, MACHINE_GUN_KEY.translatedKeyMessage)
+        player.displayClientMessage(hint, true)
     }
 
     private fun leave(mc: Minecraft) {
@@ -370,7 +407,7 @@ object GunnerClient {
         viewBefore = null
         boarded = null
         aim = null; lands = null; path = emptyList(); flying = null; flyingPath = emptyList()
-        zoomed = false; wasKept = false; wasAt = null; locked = null; lob = false
+        zoomed = false; wasKept = false; wasAt = null; locked = null; lob = false; machineGunsHeld = false
         triggerHeld = false; useMouse = false; triggerMouse = false; attackKeyWas = false
         roundsWas = -1; shotsSeen = -1; steadySent = false; aimSent = null
         layCache.clear()

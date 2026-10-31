@@ -68,16 +68,15 @@ object Turrets {
     private const val HURT_BONUS = 3.0
     /** A target this many degrees off where the gun points counts as a block further. */
     private const val DEGREES_PER_BLOCK = 20.0
-    /** Blocks either side of the line of fire anyone it must not hit keeps a guarding gun from firing. */
-    private const val FRIEND_CLEARANCE = 0.5
     /** A guarding gun keeping watch turns at this share of its top pace. */
     private const val WATCH_PACE = 0.3
 
     /** Runs [vehicle]'s gun for a tick. Call from the vehicle's `tick()`, on both sides. */
     @JvmStatic
     fun tick(vehicle: ArmedVehicle) {
-        vehicle.turret.keepPrevious()
-        val level = vehicle.entity.level() as? ServerLevel ?: return
+        val guns = vehicle.turretSpec.machineGuns
+        vehicle.turret.keepPrevious(guns.size) { guns[it].rest }
+        val level = vehicle.entity.level() as? ServerLevel ?: run { clientTick(vehicle); return }
         val gun = vehicle.turret.gunnery
         val now = level.gameTime
         val at = vehicle.entity.position()
@@ -94,7 +93,13 @@ object Turrets {
             vehicle.turret.laid = false
             vehicle.turret.pullWaiting = false
         }
+        MachineGuns.tick(level, vehicle, gun, gunner, now)
+        if (now % UNSEEN_TICKS == 0L) gun.forgetUnseen(now, UNSEEN_TICKS)
     }
+
+    /** The client's own per-vehicle tick (tracers and muzzle flashes), set by the client's setup. */
+    @JvmStatic
+    var clientTick: (ArmedVehicle) -> Unit = {}
 
     /** Whether [vehicle]'s gunner asks for a steady platform (down the sight, or locked on): slow the vehicle while it is true. */
     @JvmStatic
@@ -160,6 +165,19 @@ object Turrets {
         gun.heldAimAt = player.serverLevel().gameTime
     }
 
+    /**
+     * The gunner holds the machine guns' key, saying where the crosshair is: each gun whose reach takes it in turns to
+     * it and fires full auto while that keeps coming. Taken only for a finite spot within the sight's reach.
+     */
+    fun machineGunByGunner(player: ServerPlayer, vehicleId: Int, spot: Vec3) {
+        val vehicle = gunnedBy(player, vehicleId) ?: return
+        if (!spot.x.isFinite() || !spot.y.isFinite() || !spot.z.isFinite()) return
+        if (spot.distanceTo(vehicle.entity.position()) > Aiming.SIGHT_RANGE + HELD_AIM_SLACK) return
+        val gun = vehicle.turret.gunnery
+        gun.machineGunAim = spot
+        gun.machineGunAimAt = player.serverLevel().gameTime
+    }
+
     /** The gunner asks for a steady platform, or lets it go ([wantsSteady]). */
     fun steadyByGunner(player: ServerPlayer, vehicleId: Int, steady: Boolean) {
         gunnedBy(player, vehicleId)?.turret?.gunnery?.steady = steady
@@ -205,7 +223,6 @@ object Turrets {
                 gun.target = better?.id ?: -1
             }
         }
-        if (now % UNSEEN_TICKS == 0L) gun.sighted.entries.removeIf { (id, seen) -> (now - seen > UNSEEN_TICKS).also { if (it) gun.tracks.remove(id) } }
 
         val solution = target?.let { solve(vehicle, gun, it, pivot, riders, now) }
         var watch: Pair<Double, Double>? = null
@@ -230,7 +247,7 @@ object Turrets {
         lay(vehicle, gun, goal, riders, pivot, spec.guardMount, keepPace = target != null, watch = watch)
         publishAngles(vehicle, gun)
         if (target == null || solution == null) { gun.blockedSince = now; return }
-        val clear = clearPath(level, vehicle, Aiming.muzzle(vehicle), Aiming.aimPoint(target), target)
+        val clear = Aiming.clearPath(level, vehicle, Aiming.muzzle(vehicle), Aiming.aimPoint(target), target)
         if (clear) gun.blockedSince = now else if (now - gun.blockedSince > BLOCKED_TICKS) gun.target = -1
         // A lob goes over what is in the way.
         if ((clear || gun.autoLob) && laid(vehicle, solution, target, pivot) && now - gun.firedAt >= spec.round.reloadTicks) {
@@ -244,7 +261,7 @@ object Turrets {
      * the round's flight, flat or lobbed as a gunner's sight would choose. Null when it is too near or out of reach.
      */
     private fun solve(vehicle: ArmedVehicle, gun: Gunnery, target: Entity, pivot: Vec3, riders: List<DeckClearance.Rider>, now: Long): Ballistics.Solution? {
-        val track = track(gun, target, now)
+        val track = gun.track(target, now)
         val feet = Aiming.standing(vehicle.entity.level(), target)
         val ground = Vec3(track.velocity.x, 0.0, track.velocity.z)
         val floorAt = { t: Double -> Aiming.floor(vehicle, t, riders, pivot) }
@@ -258,19 +275,6 @@ object Turrets {
     }
 
     private const val LEAD_PASSES = 2
-
-    /** What the gun makes of [mob] now, sighted once a tick. */
-    private fun track(gun: Gunnery, mob: Entity, now: Long): TargetTrack {
-        val seen = Aiming.aimPoint(mob)
-        val track = gun.tracks.getOrPut(mob.id) { TargetTrack(seen) }
-        val last = gun.sighted.put(mob.id, now)
-        if (last != now) {
-            if (last == null || now - last > 1L) track.reset(seen) else track.see(seen)
-            // A mob on the ground falls only as far as the ground: its step down is no fall to lead.
-            if (mob.onGround()) track.velocity = Vec3(track.velocity.x, 0.0, track.velocity.z)
-        }
-        return track
-    }
 
     /** Whether [target] is still one to shoot at: allowed, in range, not under water, and in sight lately. */
     private fun stillGood(level: ServerLevel, vehicle: ArmedVehicle, gun: Gunnery, target: Entity, pivot: Vec3, now: Long): Boolean {
@@ -313,7 +317,7 @@ object Turrets {
             // One it could only shoot at through its riders, or down into its own vehicle, is no target.
             val (t, el) = Ballistics.angles(e.yRot.toDouble(), dir)
             if (el < Aiming.floor(vehicle, t, riders, pivot) - 0.5) continue
-            if (!clearPath(level, vehicle, pivot.add(dir.scale(vehicle.turretSpec.barrel)), at, mob)) continue
+            if (!Aiming.clearPath(level, vehicle, pivot.add(dir.scale(vehicle.turretSpec.barrel)), at, mob)) continue
             best = mob
             bestScore = score
         }
@@ -329,21 +333,6 @@ object Turrets {
         val to = Aiming.aimPoint(target)
         val start = pivot.add(to.subtract(pivot).normalize().scale(barrel))
         return level.clip(ClipContext(start, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, target)).type == HitResult.Type.MISS
-    }
-
-    /** Whether a round from [muzzle] would get to [target] at [to]: nothing solid in the way, and nobody friendly near its line. */
-    private fun clearPath(level: ServerLevel, vehicle: ArmedVehicle, muzzle: Vec3, to: Vec3, target: Entity): Boolean {
-        if (level.clip(ClipContext(muzzle, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, target)).type != HitResult.Type.MISS) return false
-        val path = to.subtract(muzzle)
-        val length = path.length()
-        val along = path.scale(1.0 / max(length, 1.0e-6))
-        val ship = vehicle.entity
-        val rules = vehicle.targetRules
-        return level.getEntities(target, AABB(muzzle, to).inflate(FRIEND_CLEARANCE + 1.0)) { it !== ship && rules.friendly(it) }.none { other ->
-            val c = other.boundingBox.center.subtract(muzzle)
-            val s = c.dot(along).coerceIn(0.0, length)
-            c.subtract(along.scale(s)).length() < FRIEND_CLEARANCE + other.bbWidth * 0.5
-        }
     }
 
     /** Whether the barrel lies on [solution] closely enough for a round to meet [target]. */

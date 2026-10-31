@@ -3,12 +3,15 @@ package dev.vehicleguns
 import dev.vehicleguns.demo.GunBoat
 import dev.vehicleguns.demo.GunBoatItem
 import dev.vehicleguns.entity.ShellEntity
+import dev.vehicleguns.menu.MagazineMenu
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.damagesource.DamageType
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.MobCategory
+import net.minecraft.world.flag.FeatureFlags
+import net.minecraft.world.inventory.MenuType
 import net.minecraft.world.item.Item
 
 /** The mod's id and what it registers. Each loader calls [registerEntityTypes] and [registerItems] at its own time. */
@@ -22,6 +25,9 @@ object VehicleGuns {
     }
 
     val SHELL_DAMAGE: ResourceKey<DamageType> = ResourceKey.create(Registries.DAMAGE_TYPE, id("shell"))
+    val BULLET_DAMAGE: ResourceKey<DamageType> = ResourceKey.create(Registries.DAMAGE_TYPE, id("bullet"))
+
+    val MAGAZINE_MENU: MenuType<MagazineMenu> by lazy { MenuType(::MagazineMenu, FeatureFlags.VANILLA_SET) }
 
     /** The demo vehicle: a boat with a gun on it. */
     val GUN_BOAT: EntityType<GunBoat> by lazy {
@@ -33,6 +39,10 @@ object VehicleGuns {
     fun registerEntityTypes(register: (ResourceLocation, EntityType<*>) -> Unit) {
         register(id("shell"), SHELL)
         register(id("gun_boat"), GUN_BOAT)
+    }
+
+    fun registerMenus(register: (ResourceLocation, MenuType<*>) -> Unit) {
+        register(id("magazine"), MAGAZINE_MENU)
     }
 
     fun registerItems(register: (ResourceLocation, Item) -> Unit) {

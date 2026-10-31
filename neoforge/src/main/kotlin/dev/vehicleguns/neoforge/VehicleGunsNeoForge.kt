@@ -27,6 +27,7 @@ class VehicleGunsNeoForge(modBus: IEventBus) {
             when (event.registryKey) {
                 Registries.ENTITY_TYPE -> VehicleGuns.registerEntityTypes { id, type -> event.register(Registries.ENTITY_TYPE, id) { type } }
                 Registries.ITEM -> VehicleGuns.registerItems { id, item -> event.register(Registries.ITEM, id) { item } }
+                Registries.MENU -> VehicleGuns.registerMenus { id, menu -> event.register(Registries.MENU, id) { menu } }
             }
         })
         modBus.addListener(RegisterPayloadHandlersEvent::class.java, Consumer { event ->

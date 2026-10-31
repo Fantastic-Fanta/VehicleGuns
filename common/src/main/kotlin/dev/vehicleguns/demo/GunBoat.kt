@@ -4,29 +4,38 @@ import dev.vehicleguns.VehicleGuns
 import dev.vehicleguns.api.ArmedVehicle
 import dev.vehicleguns.api.CameraSpec
 import dev.vehicleguns.api.GuardSpec
+import dev.vehicleguns.api.MachineGunSpec
+import dev.vehicleguns.api.Magazine
 import dev.vehicleguns.api.RoundSpec
 import dev.vehicleguns.api.Turret
 import dev.vehicleguns.api.TurretSpec
 import dev.vehicleguns.api.TurretSync
 import dev.vehicleguns.gun.Turrets
+import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.syncher.SynchedEntityData
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.InteractionResult
+import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.HasCustomInventoryScreen
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.vehicle.Boat
 import net.minecraft.world.item.Item
-import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.Level
+import net.minecraft.world.phys.Vec3
 
 /**
- * The reference vehicle: a boat with a gun on its bow. Alone aboard, a player both steers it and lays the gun; with
- * two aboard, whoever sits behind is the gunner. With no player aboard the gun guards on its own. A gunner's rounds
- * are fire charges from their inventory, except in creative.
+ * The reference vehicle: a boat with a gun on its bow and a machine gun either side. Alone aboard, a player both
+ * steers it and lays the guns; with two aboard, whoever sits behind is the gunner. With no player aboard the guns guard
+ * on their own. The main gun fires fire charges from the boat's magazine, except in creative: the gunner opens it with
+ * their inventory key, anyone with a sneak-click and an empty hand, and a sneak-click with fire charges loads them.
  */
-class GunBoat(type: EntityType<out GunBoat>, level: Level) : Boat(type, level), ArmedVehicle {
+class GunBoat(type: EntityType<out GunBoat>, level: Level) : Boat(type, level), ArmedVehicle, HasCustomInventoryScreen {
     override val turretSpec get() = SPEC
     override val turret = Turret(this, SYNC)
+    override val magazine = Magazine(this) { it.`is`(Items.FIRE_CHARGE) }
 
     override val gunner: Player? get() = passengers.lastOrNull { it is Player } as Player?
 
@@ -45,21 +54,42 @@ class GunBoat(type: EntityType<out GunBoat>, level: Level) : Boat(type, level), 
         if (rider !== gunner) super.clampRotation(rider)
     }
 
-    override fun roundsLeft(gunner: Player): Int = if (gunner.abilities.instabuild) -1 else gunner.inventory.countItem(AMMO)
+    override fun interact(player: Player, hand: InteractionHand): InteractionResult {
+        if (!player.isSecondaryUseActive) return super.interact(player, hand)
+        val stack = player.getItemInHand(hand)
+        when {
+            magazine.ammo(stack) -> if (!level().isClientSide) magazine.load(stack)
+            stack.isEmpty -> if (!level().isClientSide) magazine.open(player)
+            else -> return InteractionResult.PASS
+        }
+        return InteractionResult.sidedSuccess(level().isClientSide)
+    }
 
-    override fun takeRound(gunner: Player): Boolean {
-        if (gunner.abilities.instabuild) return true
-        val slot = gunner.inventory.findSlotMatchingItem(ItemStack(AMMO))
-        if (slot < 0) return false
-        gunner.inventory.removeItem(slot, 1)
-        return true
+    override fun openCustomInventoryScreen(player: Player) {
+        if (player === gunner && !level().isClientSide) magazine.open(player)
+    }
+
+    override fun addAdditionalSaveData(tag: CompoundTag) {
+        super.addAdditionalSaveData(tag)
+        magazine.save(tag, registryAccess())
+    }
+
+    override fun readAdditionalSaveData(tag: CompoundTag) {
+        super.readAdditionalSaveData(tag)
+        magazine.load(tag, registryAccess())
+    }
+
+    override fun destroy(source: DamageSource) {
+        super.destroy(source)
+        if (!level().isClientSide) magazine.dropAll()
     }
 
     override fun getDropItem(): Item = VehicleGuns.GUN_BOAT_ITEM
 
     companion object {
         val SYNC = TurretSync.define(GunBoat::class.java)
-        private val AMMO = Items.FIRE_CHARGE
+
+        private val SIDE_GUN = MachineGunSpec(mount = Vec3(0.1, 0.55, 0.45), rest = Vec3(0.5, 1.0, 0.0), barrel = 0.5)
 
         val SPEC = TurretSpec(
             pivotForward = 0.55,
@@ -70,6 +100,7 @@ class GunBoat(type: EntityType<out GunBoat>, level: Level) : Boat(type, level), 
             round = RoundSpec(blastPower = 2.5f, reach = 80.0),
             guard = GuardSpec(range = 24.0),
             camera = CameraSpec(back = 7.0, up = 1.0, rise = 1.8),
+            machineGuns = listOf(SIDE_GUN.mirrored(), SIDE_GUN),
         )
     }
 }

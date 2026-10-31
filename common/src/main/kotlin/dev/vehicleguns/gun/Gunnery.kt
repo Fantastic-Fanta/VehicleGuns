@@ -50,6 +50,33 @@ class Gunnery {
     /** The last lay worked out, kept while what it was worked out for stands still ([LayCache]). */
     val layCache = LayCache()
 
+    // The machine guns.
+    var machineGuns: Array<MachineGunState> = emptyArray()
+    /** Under the gunner's key: where the crosshair is, and when they last said so. */
+    var machineGunAim: Vec3? = null
+    var machineGunAimAt = NEVER
+    /** Firing by hand left, 1 full, and whether, spent, they cool until full. */
+    var heat = 1.0
+    var cooling = false
+
+    /** What the gun makes of [mob] now, sighted once a tick however many guns watch it. */
+    fun track(mob: net.minecraft.world.entity.Entity, now: Long): TargetTrack {
+        val seen = Aiming.aimPoint(mob)
+        val track = tracks.getOrPut(mob.id) { TargetTrack(seen) }
+        val last = sighted.put(mob.id, now)
+        if (last != now) {
+            if (last == null || now - last > 1L) track.reset(seen) else track.see(seen)
+            // A mob on the ground falls only as far as the ground: its step down is no fall to lead.
+            if (mob.onGround()) track.velocity = Vec3(track.velocity.x, 0.0, track.velocity.z)
+        }
+        return track
+    }
+
+    /** Forgets mobs no gun has sighted for [unseen] ticks. */
+    fun forgetUnseen(now: Long, unseen: Long) {
+        sighted.entries.removeIf { (id, seen) -> (now - seen > unseen).also { if (it) tracks.remove(id) } }
+    }
+
     /** Back to a gun nobody lays. */
     fun dropGunner() {
         headingWas = null
@@ -57,6 +84,7 @@ class Gunnery {
         lay = null
         pullUntil = NEVER
         steady = false
+        machineGunAim = null
     }
 
     fun dropTarget() {
@@ -71,6 +99,23 @@ class Gunnery {
         /** A time long before anything happened, safe to subtract from. */
         const val NEVER = Long.MIN_VALUE / 4
     }
+}
+
+/** One machine gun's state: its target, its lie in the vehicle's frame, its burst, and its bullets on their way. */
+class MachineGunState {
+    var target = -1
+    var lie: Vec3? = null
+    var lastAimed = Gunnery.NEVER
+    var readyAt = 0L
+    var firedAt = Gunnery.NEVER
+    var burstLeft = 0
+    var shots = 0
+    var lastEnd: Vec3? = null
+    var manual = false
+    val inFlight = ArrayList<Bullet>()
+
+    /** A bullet that gets as far as it was aimed at tick [lands], from [from] along [dir], spent [reach] out. */
+    class Bullet(val lands: Long, val from: Vec3, val dir: Vec3, val reach: Double, val manual: Boolean)
 }
 
 /**

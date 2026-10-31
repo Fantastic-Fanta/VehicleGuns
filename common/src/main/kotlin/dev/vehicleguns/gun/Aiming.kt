@@ -168,6 +168,26 @@ object Aiming {
         return if (lob.reaches) lob to true else flat to false
     }
 
+    /**
+     * Whether a round from [muzzle] would get to [target] at [to]: nothing solid in the way, and nobody friendly
+     * ([dev.vehicleguns.api.TargetRules.friendly]) within [FRIEND_CLEARANCE] of its line.
+     */
+    fun clearPath(level: Level, vehicle: ArmedVehicle, muzzle: Vec3, to: Vec3, target: Entity): Boolean {
+        if (level.clip(ClipContext(muzzle, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, target)).type != HitResult.Type.MISS) return false
+        val path = to.subtract(muzzle)
+        val length = path.length()
+        val along = path.scale(1.0 / max(length, 1.0e-6))
+        val ship = vehicle.entity
+        val rules = vehicle.targetRules
+        return level.getEntities(target, AABB(muzzle, to).inflate(FRIEND_CLEARANCE + 1.0)) { it !== ship && rules.friendly(it) }.none { other ->
+            val c = other.boundingBox.center.subtract(muzzle)
+            val s = c.dot(along).coerceIn(0.0, length)
+            c.subtract(along.scale(s)).length() < FRIEND_CLEARANCE + other.bbWidth * 0.5
+        }
+    }
+
+    private const val FRIEND_CLEARANCE = 0.5
+
     /** Whether a round laid [lay] comes down near [aim] rather than on something on the way there. */
     private fun clearFlight(level: Level, vehicle: ArmedVehicle, pivot: Vec3, lay: Ballistics.Arc, vehicleVelocity: Vec3, aim: Vec3): Boolean {
         val round = vehicle.turretSpec.round

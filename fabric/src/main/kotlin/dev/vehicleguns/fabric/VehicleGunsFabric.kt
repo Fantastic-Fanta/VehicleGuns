@@ -16,6 +16,7 @@ object VehicleGunsFabric : ModInitializer {
     override fun onInitialize() {
         VehicleGuns.registerEntityTypes { id, type -> Registry.register(BuiltInRegistries.ENTITY_TYPE, id, type) }
         VehicleGuns.registerItems { id, item -> Registry.register(BuiltInRegistries.ITEM, id, item) }
+        VehicleGuns.registerMenus { id, menu -> Registry.register(BuiltInRegistries.MENU, id, menu) }
         Net.toPlayer = { player, payload -> ServerPlayNetworking.send(player, payload) }
         Net.CLIENTBOUND.forEach { PayloadTypeRegistry.playS2C().register(it.type, it.codec) }
         Net.SERVERBOUND.forEach { serverbound(it) }

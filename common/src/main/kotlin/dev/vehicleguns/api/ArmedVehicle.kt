@@ -29,11 +29,17 @@ interface ArmedVehicle {
     /** Who the gun may shoot. */
     val targetRules: TargetRules get() = TargetRules.DEFAULT
 
+    /**
+     * Where the main gun's rounds come from, opened with the gunner's inventory key; null for none, when rounds are
+     * unlimited unless [roundsLeft] and [takeRound] say otherwise. The vehicle saves and drops it.
+     */
+    val magazine: Magazine? get() = null
+
     /** Rounds [gunner] has to fire, or -1 for no limit. Shown on their sight. */
-    fun roundsLeft(gunner: Player): Int = -1
+    fun roundsLeft(gunner: Player): Int = if (gunner.abilities.instabuild) -1 else magazine?.rounds() ?: -1
 
     /** Takes a round for [gunner] to fire; false when there is none. A guarding gun needs none. */
-    fun takeRound(gunner: Player): Boolean = true
+    fun takeRound(gunner: Player): Boolean = gunner.abilities.instabuild || magazine?.take() ?: true
 }
 
 /** The entity an [ArmedVehicle] is. */

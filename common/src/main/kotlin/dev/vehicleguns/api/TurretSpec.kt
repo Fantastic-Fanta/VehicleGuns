@@ -2,6 +2,7 @@ package dev.vehicleguns.api
 
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.Items
+import net.minecraft.world.phys.Vec3
 
 /**
  * How a vehicle's gun is built and handled. Distances are blocks, angles degrees, times ticks.
@@ -25,7 +26,42 @@ data class TurretSpec(
     val camera: CameraSpec = CameraSpec(),
     /** The gunner sits inside the turret: they are not drawn while aboard. */
     val hideGunner: Boolean = false,
+    /** Small hitscan guns beside the main gun. */
+    val machineGuns: List<MachineGunSpec> = emptyList(),
+    /** How long the gunner may fire the machine guns before they overheat; null for no limit. */
+    val heat: HeatSpec? = HeatSpec(),
 )
+
+/**
+ * A machine gun mounted at [mount] in the vehicle's frame (x ahead, y to its right, z up), its muzzle [barrel] out.
+ * It rests pointing along [rest] and turns up to [cone] degrees from it, [turnDegrees] a tick. Guarding, it fires
+ * bursts of [burst] rounds [burstGap] ticks apart every [burstReload] ticks at hostile mobs within [range]; under the
+ * gunner's key, a round every [autoGap] ticks at the crosshair within [gunnerRange]. Bullets fly [bulletSpeed] blocks
+ * a tick, up to [spread] degrees off the barrel.
+ */
+data class MachineGunSpec(
+    val mount: Vec3,
+    val rest: Vec3 = Vec3(1.0, 0.0, 0.0),
+    val cone: Double = 70.0,
+    val barrel: Double = 0.6,
+    val turnDegrees: Double = 12.0,
+    val range: Double = 16.0,
+    val gunnerRange: Double = 48.0,
+    val bulletSpeed: Double = 10.0,
+    val spread: Double = 2.5,
+    val guardDamage: Float = 1.5f,
+    val gunnerDamage: Float = 4.5f,
+    val burst: Int = 3,
+    val burstGap: Int = 3,
+    val burstReload: Int = 24,
+    val autoGap: Int = 3,
+) {
+    /** The same gun on the other side of the vehicle. */
+    fun mirrored(): MachineGunSpec = copy(mount = Vec3(mount.x, -mount.y, mount.z), rest = Vec3(rest.x, -rest.y, rest.z))
+}
+
+/** The machine guns may fire by hand for [holdSeconds], then cool for [coolSeconds] back to full before they fire again. */
+data class HeatSpec(val holdSeconds: Double = 6.0, val coolSeconds: Double = 4.0)
 
 /**
  * A mount's pace: the turret's fastest swing and the barrel's fastest rise, degrees a tick, and how much of that each

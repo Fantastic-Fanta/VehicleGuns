@@ -2,6 +2,7 @@ package dev.vehicleguns.client
 
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
+import dev.vehicleguns.ballistics.VehicleFrame
 import dev.vehicleguns.demo.GunBoat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.MultiBufferSource
@@ -31,9 +32,22 @@ class GunBoatRenderer(context: EntityRendererProvider.Context) : BoatRenderer(co
         val bore = spec.barrelRadius * 2
         block(pose, buffers, light, BARREL, -bore / 2, -bore / 2, 0.0, bore, bore, spec.barrel)
         pose.popPose()
+        // The machine guns, each a thin barrel from its mount along where it lies.
+        for ((i, gun) in spec.machineGuns.withIndex()) {
+            val dir = boat.turret.machineGunDirection(i, gun.rest, yaw.toDouble(), partial)
+            val at = VehicleFrame.way(yaw.toDouble(), gun.mount)
+            pose.pushPose()
+            pose.translate(at.x, at.y, at.z)
+            pose.mulPose(Axis.YP.rotationDegrees(-Math.toDegrees(Math.atan2(-dir.x, dir.z)).toFloat()))
+            pose.mulPose(Axis.XP.rotationDegrees(-Math.toDegrees(Math.asin(dir.y.coerceIn(-1.0, 1.0))).toFloat()))
+            block(pose, buffers, light, BARREL, -MG_BORE / 2, -MG_BORE / 2, 0.0, MG_BORE, MG_BORE, gun.barrel)
+            pose.popPose()
+        }
     }
 
     /** [state]'s block drawn as a box from ([x], [y], [z]) of [w] by [h] by [d] in the current frame. */
+    // NeoForge deprecates this for its model-data overload, which Fabric does not have.
+    @Suppress("DEPRECATION")
     private fun block(pose: PoseStack, buffers: MultiBufferSource, light: Int, state: BlockState, x: Double, y: Double, z: Double, w: Double, h: Double, d: Double) {
         pose.pushPose()
         pose.translate(x, y, z)
@@ -45,5 +59,6 @@ class GunBoatRenderer(context: EntityRendererProvider.Context) : BoatRenderer(co
     private companion object {
         val HOUSING: BlockState = Blocks.POLISHED_ANDESITE.defaultBlockState()
         val BARREL: BlockState = Blocks.IRON_BLOCK.defaultBlockState()
+        const val MG_BORE = 0.08
     }
 }

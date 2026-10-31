@@ -10,8 +10,6 @@ import dev.vehicleguns.network.Net
 import dev.vehicleguns.network.ShellBurstPayload
 import net.minecraft.core.Holder
 import net.minecraft.core.particles.ParticleTypes
-import net.minecraft.core.registries.Registries
-import net.minecraft.network.chat.Component
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
@@ -19,7 +17,6 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.damagesource.DamageSource
-import net.minecraft.world.damagesource.DamageType
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
@@ -155,17 +152,7 @@ class ShellEntity(type: EntityType<out ShellEntity>, level: Level) : ThrowableIt
         }
     }
 
-    private fun source(level: ServerLevel): DamageSource =
-        ShellSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(VehicleGuns.SHELL_DAMAGE), this, owner)
-
-    /** A round's blow: the death message names the gunner, or the vehicle when it has a name. */
-    class ShellSource(type: Holder<DamageType>, shell: Entity, private val firer: Entity?) : DamageSource(type, shell, firer) {
-        override fun getLocalizedDeathMessage(killed: LivingEntity): Component {
-            val name = (firer as? Player)?.displayName ?: firer?.customName
-            return if (name != null && name.string.isNotBlank()) Component.translatable("death.attack.vehicleguns.shell.named", killed.displayName, name)
-            else Component.translatable("death.attack.vehicleguns.shell", killed.displayName)
-        }
-    }
+    private fun source(level: ServerLevel): DamageSource = GunDamage.source(level, VehicleGuns.SHELL_DAMAGE, this, owner)
 
     companion object {
         /** It is drawn from this many ticks after it is fired, out of the muzzle's flash. */

@@ -30,6 +30,7 @@ object GunnerHud {
         muzzleFlash(graphics, now)
         reticle(graphics, vehicle, cx, cy, now)
         hitMarker(graphics, cx, cy, now)
+        heatBar(graphics, vehicle, cx, cy)
         compass(graphics, vehicle, cx, now)
         roundOffScreen(graphics, now)
     }
@@ -92,6 +93,18 @@ object GunnerHud {
             graphics.fill(cx - k, cy + k, cx - k + 1, cy + k + 1, c)
             graphics.fill(cx + k, cy + k, cx + k + 1, cy + k + 1, c)
         }
+    }
+
+    /** The machine guns' heat under the reticle, while it is not full or their key is held: amber while they cool. */
+    private fun heatBar(graphics: GuiGraphics, vehicle: ArmedVehicle, cx: Int, cy: Int) {
+        if (vehicle.turretSpec.machineGuns.isEmpty() || vehicle.turretSpec.heat == null) return
+        val heat = vehicle.turret.heat
+        if (heat >= 1f && !GunnerClient.machineGunsHeld) return
+        val y = cy + HEAT_BAR_Y
+        val half = HEAT_BAR_WIDTH / 2
+        graphics.fill(cx - half - 1, y - 1, cx + half + 1, y + 2, 0x80000000.toInt())
+        val filled = Math.round(HEAT_BAR_WIDTH * heat.coerceIn(0f, 1f))
+        graphics.fill(cx - half, y, cx - half + filled, y + 1, if (vehicle.turret.overheated) AMBER else WHITE)
     }
 
     /** A compass tape along the top while the view or the turret turns: north as 0, the turret's bearing marked under it. */
@@ -161,6 +174,8 @@ object GunnerHud {
     private const val FLASH_SECONDS = 0.12
     private const val HIT_SECONDS = 0.6
     private const val REFUSED_SECONDS = 0.35
+    private const val HEAT_BAR_Y = 18
+    private const val HEAT_BAR_WIDTH = 25
     private const val COMPASS_HOLD = 1.5
     private const val COMPASS_FADE = 0.5
 }

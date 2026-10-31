@@ -46,6 +46,19 @@ data class GunSteadyPayload(val vehicle: Int, val steady: Boolean) : CustomPacke
     }
 }
 
+/** Client to server: the gunner of [vehicle] holds the machine guns' key with the crosshair on this spot. Sent every tick it is held. */
+data class GunMachinePayload(val vehicle: Int, val x: Double, val y: Double, val z: Double) : CustomPacketPayload {
+    override fun type() = TYPE
+
+    companion object {
+        val TYPE = type<GunMachinePayload>("gun_machine")
+        val CODEC: StreamCodec<RegistryFriendlyByteBuf, GunMachinePayload> = CustomPacketPayload.codec(
+            { p, buf -> buf.writeVarInt(p.vehicle); buf.writeDouble(p.x); buf.writeDouble(p.y); buf.writeDouble(p.z) },
+            { buf -> GunMachinePayload(buf.readVarInt(), buf.readDouble(), buf.readDouble(), buf.readDouble()) },
+        )
+    }
+}
+
 /** Server to the gunner who fired it: where their round came down, how many it hurt and how many of those it killed. */
 data class GunHitPayload(val x: Double, val y: Double, val z: Double, val hits: Int, val kills: Int) : CustomPacketPayload {
     override fun type() = TYPE

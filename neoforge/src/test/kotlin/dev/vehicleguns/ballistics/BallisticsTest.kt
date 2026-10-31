@@ -157,6 +157,33 @@ class BallisticsTest {
         assertNull(Ballistics.meets(from, Vec3(1.0, 0.0, 0.0), 5.0, box, 0.0), "short of it")
     }
 
+    @Test
+    fun theVehicleFrameTurnsWithTheHeadingAndBack() {
+        // Heading 0 faces +z, so ahead is +z and its right is -x.
+        assertEquals(0.0, VehicleFrame.way(0.0, Vec3(1.0, 0.0, 0.0)).distanceTo(Vec3(0.0, 0.0, 1.0)), 1e-9)
+        assertEquals(0.0, VehicleFrame.way(0.0, Vec3(0.0, 1.0, 0.0)).distanceTo(Vec3(-1.0, 0.0, 0.0)), 1e-9)
+        for (heading in listOf(0.0, 37.0, -120.0, 179.0)) {
+            val local = Vec3(0.3, -0.7, 0.2)
+            assertEquals(0.0, VehicleFrame.local(heading, VehicleFrame.way(heading, local)).distanceTo(local), 1e-9, "round trip at $heading")
+            // Ahead in the vehicle's frame is the heading's own forward.
+            assertEquals(0.0, VehicleFrame.way(heading, Vec3(1.0, 0.0, 0.0)).distanceTo(Ballistics.forward(heading)), 1e-9)
+        }
+    }
+
+    @Test
+    fun aSmallMountTurnsAtItsPaceAndStopsOnItsMark() {
+        val from = Vec3(0.0, 0.0, 1.0)
+        val to = Vec3(1.0, 0.0, 0.0)
+        val step = VehicleFrame.turnToward(from, to, 12.0)
+        assertEquals(12.0, Ballistics.apart(from, step), 1e-6, "a tick's turn")
+        assertEquals(78.0, Ballistics.apart(step, to), 1e-6, "the rest still to go")
+        var at = from
+        repeat(8) { at = VehicleFrame.turnToward(at, to, 12.0) }
+        assertEquals(0.0, Ballistics.apart(at, to), 1e-6, "on its mark after 90 degrees at 12 a tick")
+        // Asked to turn straight about, it still turns a tick's worth.
+        assertEquals(12.0, Ballistics.apart(from, VehicleFrame.turnToward(from, from.scale(-1.0), 12.0)), 1e-6)
+    }
+
     /** Flies a round as the gun fires it and returns where it comes down through [floorY]. */
     private fun landingOf(pivot: Vec3, lay: Ballistics.Arc, vehicle: Vec3, floorY: Double): Vec3 {
         var at = pivot.add(lay.dir.scale(1.91))
