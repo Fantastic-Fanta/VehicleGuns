@@ -1,0 +1,11 @@
+{
+  "item.vehicleguns.gun_boat": "Gun Boat",
+  "entity.vehicleguns.gun_boat": "Gun Boat",
+  "entity.vehicleguns.shell": "Shell",
+  "death.attack.vehicleguns.shell": "%1$s was shelled",
+  "death.attack.vehicleguns.shell.named": "%1$s was shelled by %2$s",
+  "key.categories.vehicleguns": "Vehicle Guns",
+  "key.vehicleguns.lock": "Lock on target",
+  "message.vehicleguns.hint": "Attack fires, use zooms, %s locks on",
+  "message.vehicleguns.no_rounds": "No rounds"
+}

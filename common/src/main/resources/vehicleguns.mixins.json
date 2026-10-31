@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.vehicleguns.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "client.CameraGunnerMixin",
+    "client.EntityRenderDispatcherGunnerMixin",
+    "client.EntityTurnGunnerMixin",
+    "client.GameRendererGunnerMixin",
+    "client.GuiGunnerMixin",
+    "client.ItemInHandRendererGunnerMixin",
+    "client.MinecraftGunnerMixin",
+    "client.MouseHandlerGunnerMixin",
+    "client.OptionsGunnerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
