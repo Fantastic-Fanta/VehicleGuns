@@ -2,6 +2,7 @@ package dev.vehicleguns
 
 import dev.vehicleguns.demo.GunBoat
 import dev.vehicleguns.demo.GunBoatItem
+import dev.vehicleguns.entity.SeekerEntity
 import dev.vehicleguns.entity.ShellEntity
 import dev.vehicleguns.menu.MagazineMenu
 import net.minecraft.core.registries.Registries
@@ -24,8 +25,13 @@ object VehicleGuns {
         EntityType.Builder.of(::ShellEntity, MobCategory.MISC).sized(0.3f, 0.3f).clientTrackingRange(8).updateInterval(1).build("$MOD_ID:shell")
     }
 
+    val SEEKER: EntityType<SeekerEntity> by lazy {
+        EntityType.Builder.of(::SeekerEntity, MobCategory.MISC).sized(0.4f, 0.4f).clientTrackingRange(8).updateInterval(1).build("$MOD_ID:seeker")
+    }
+
     val SHELL_DAMAGE: ResourceKey<DamageType> = ResourceKey.create(Registries.DAMAGE_TYPE, id("shell"))
     val BULLET_DAMAGE: ResourceKey<DamageType> = ResourceKey.create(Registries.DAMAGE_TYPE, id("bullet"))
+    val SEEKER_DAMAGE: ResourceKey<DamageType> = ResourceKey.create(Registries.DAMAGE_TYPE, id("seeker"))
 
     val MAGAZINE_MENU: MenuType<MagazineMenu> by lazy { MenuType(::MagazineMenu, FeatureFlags.VANILLA_SET) }
 
@@ -38,6 +44,7 @@ object VehicleGuns {
 
     fun registerEntityTypes(register: (ResourceLocation, EntityType<*>) -> Unit) {
         register(id("shell"), SHELL)
+        register(id("seeker"), SEEKER)
         register(id("gun_boat"), GUN_BOAT)
     }
 

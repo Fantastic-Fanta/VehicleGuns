@@ -11,6 +11,12 @@
   "death.attack.vehicleguns.bullet": "%1$s was shot",
   "death.attack.vehicleguns.bullet.named": "%1$s was shot by %2$s",
   "key.vehicleguns.machine_guns": "Fire machine guns",
-  "message.vehicleguns.hint_machine_guns": "Attack fires, use zooms, %s locks on, %s machine guns",
-  "container.vehicleguns.magazine": "Magazine"
+  "container.vehicleguns.magazine": "Magazine",
+  "entity.vehicleguns.seeker": "Homing Round",
+  "death.attack.vehicleguns.seeker": "%1$s was blown up by a homing round",
+  "death.attack.vehicleguns.seeker.named": "%1$s was blown up by %2$s's homing round",
+  "key.vehicleguns.seekers": "Launch torpedoes or missiles",
+  "message.vehicleguns.hint.machine_guns": ", %s machine guns",
+  "message.vehicleguns.hint.torpedoes": ", %s torpedoes",
+  "message.vehicleguns.hint.missiles": ", %s missiles"
 }

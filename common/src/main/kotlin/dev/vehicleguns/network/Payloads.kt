@@ -59,6 +59,19 @@ data class GunMachinePayload(val vehicle: Int, val x: Double, val y: Double, val
     }
 }
 
+/** Client to server: the gunner of [vehicle] holds the seekers' key, marking [mark] (an entity id, -1 for none). Sent every tick it is held. */
+data class GunSeekerPayload(val vehicle: Int, val mark: Int) : CustomPacketPayload {
+    override fun type() = TYPE
+
+    companion object {
+        val TYPE = type<GunSeekerPayload>("gun_seeker")
+        val CODEC: StreamCodec<RegistryFriendlyByteBuf, GunSeekerPayload> = CustomPacketPayload.codec(
+            { p, buf -> buf.writeVarInt(p.vehicle); buf.writeVarInt(p.mark + 1) },
+            { buf -> GunSeekerPayload(buf.readVarInt(), buf.readVarInt() - 1) },
+        )
+    }
+}
+
 /** Server to the gunner who fired it: where their round came down, how many it hurt and how many of those it killed. */
 data class GunHitPayload(val x: Double, val y: Double, val z: Double, val hits: Int, val kills: Int) : CustomPacketPayload {
     override fun type() = TYPE
@@ -81,6 +94,22 @@ data class ShellBurstPayload(val x: Double, val y: Double, val z: Double, val wa
         val CODEC: StreamCodec<RegistryFriendlyByteBuf, ShellBurstPayload> = CustomPacketPayload.codec(
             { p, buf -> buf.writeDouble(p.x); buf.writeDouble(p.y); buf.writeDouble(p.z); buf.writeBoolean(p.water) },
             { buf -> ShellBurstPayload(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readBoolean()) },
+        )
+    }
+}
+
+/**
+ * Server to clients near it: a seeker burst under water at ([x], [y], [z]), the water's face over it at [face] when
+ * that is near (NaN otherwise), against the block [bed] (Block.getId, -1 for none).
+ */
+data class TorpedoBurstPayload(val x: Double, val y: Double, val z: Double, val face: Double, val bed: Int) : CustomPacketPayload {
+    override fun type() = TYPE
+
+    companion object {
+        val TYPE = type<TorpedoBurstPayload>("torpedo_burst")
+        val CODEC: StreamCodec<RegistryFriendlyByteBuf, TorpedoBurstPayload> = CustomPacketPayload.codec(
+            { p, buf -> buf.writeDouble(p.x); buf.writeDouble(p.y); buf.writeDouble(p.z); buf.writeDouble(p.face); buf.writeVarInt(p.bed + 1) },
+            { buf -> TorpedoBurstPayload(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readVarInt() - 1) },
         )
     }
 }

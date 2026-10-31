@@ -3,6 +3,7 @@ package dev.vehicleguns.neoforge
 import dev.vehicleguns.VehicleGuns
 import dev.vehicleguns.client.GunBoatRenderer
 import dev.vehicleguns.client.MagazineScreen
+import dev.vehicleguns.client.SeekerRenderer
 import dev.vehicleguns.client.VehicleGunsClient
 import dev.vehicleguns.network.Net
 import net.minecraft.client.renderer.entity.ThrownItemRenderer
@@ -24,6 +25,7 @@ internal object VehicleGunsNeoForgeClient {
         modBus.addListener(EntityRenderersEvent.RegisterRenderers::class.java, Consumer { event ->
             event.registerEntityRenderer(VehicleGuns.SHELL) { ThrownItemRenderer(it, 1.25f, false) }
             event.registerEntityRenderer(VehicleGuns.GUN_BOAT) { GunBoatRenderer(it) }
+            event.registerEntityRenderer(VehicleGuns.SEEKER) { SeekerRenderer(it) }
         })
         modBus.addListener(RegisterKeyMappingsEvent::class.java, Consumer { event -> VehicleGunsClient.KEYS.forEach { event.register(it) } })
         modBus.addListener(RegisterMenuScreensEvent::class.java, Consumer { it.register(VehicleGuns.MAGAZINE_MENU, ::MagazineScreen) })

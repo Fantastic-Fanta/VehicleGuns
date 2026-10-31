@@ -30,7 +30,40 @@ data class TurretSpec(
     val machineGuns: List<MachineGunSpec> = emptyList(),
     /** How long the gunner may fire the machine guns before they overheat; null for no limit. */
     val heat: HeatSpec? = HeatSpec(),
+    /** Homing torpedoes or missiles; null for none. */
+    val seekers: SeekerSpec? = null,
 )
+
+/**
+ * Homing rounds launched by turns from [launchers] (points in the vehicle's frame: x ahead, y right, z up), leaving
+ * along [launchDirection] at [launchShare] of their [speed] (blocks a tick) and gathering way. Each turns up to [turn]
+ * degrees a tick onto its mark within [range], and bursts on it, on whatever it runs into, or after [lifeTicks]: its
+ * mark takes [damage], everything else it may hurt within [radius] up to [splash]. A [Kind.TORPEDO] runs under water and
+ * seeks what is in it; a [Kind.MISSILE] flies and seeks what is not wholly under water.
+ *
+ * The gunner launches one every [gap] ticks while they hold the key; guarding, they go at hostile mobs more slowly.
+ * Each spends [cost] of the stamina, which comes back over [regenSeconds] while none go; spent, none go until it is
+ * back to [resume].
+ */
+data class SeekerSpec(
+    val kind: Kind,
+    val launchers: List<Vec3>,
+    val launchDirection: Vec3 = Vec3(1.0, 0.0, -0.25),
+    val launchShare: Double = 0.35,
+    val gap: Int = 5,
+    val speed: Double = 1.4,
+    val turn: Double = 8.0,
+    val range: Double = 40.0,
+    val damage: Float = 10f,
+    val splash: Float = 5f,
+    val radius: Double = 2.5,
+    val lifeTicks: Int = 60,
+    val cost: Double = 0.08,
+    val regenSeconds: Double = 5.0,
+    val resume: Double = 0.3,
+) {
+    enum class Kind { TORPEDO, MISSILE }
+}
 
 /**
  * A machine gun mounted at [mount] in the vehicle's frame (x ahead, y to its right, z up), its muzzle [barrel] out.

@@ -40,7 +40,7 @@ object Turrets {
      * The client's held aim stands this long without another, so a lag spike keeps its aim (the client sends it at
      * least twice a second), and may be this far past the sight's range.
      */
-    private const val HELD_AIM_TICKS = 40L
+    internal const val HELD_AIM_TICKS = 40L
     private const val HELD_AIM_SLACK = 16.0
     /** A gunner's gun is laid within this of its lay, degrees, bearing and elevation. */
     private const val LAID_DEGREES = 0.5
@@ -94,6 +94,8 @@ object Turrets {
             vehicle.turret.pullWaiting = false
         }
         MachineGuns.tick(level, vehicle, gun, gunner, now)
+        Seekers.tick(level, vehicle, gun, gunner, now)
+        if (gun.weaponsChanged) { gun.weaponsChanged = false; WeaponSync.publish(vehicle.turret, gun) }
         if (now % UNSEEN_TICKS == 0L) gun.forgetUnseen(now, UNSEEN_TICKS)
     }
 
@@ -176,6 +178,14 @@ object Turrets {
         val gun = vehicle.turret.gunnery
         gun.machineGunAim = spot
         gun.machineGunAimAt = player.serverLevel().gameTime
+    }
+
+    /** The gunner holds the seekers' key, marking [mark] (an entity id, -1 for none): they launch while that keeps coming. */
+    fun seekersByGunner(player: ServerPlayer, vehicleId: Int, mark: Int) {
+        val vehicle = gunnedBy(player, vehicleId) ?: return
+        val gun = vehicle.turret.gunnery
+        gun.seekUntil = player.serverLevel().gameTime + Seekers.HELD_TICKS
+        gun.seekMark = mark
     }
 
     /** The gunner asks for a steady platform, or lets it go ([wantsSteady]). */

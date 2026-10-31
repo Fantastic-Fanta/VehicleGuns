@@ -3,12 +3,10 @@ package dev.vehicleguns.gun
 import dev.vehicleguns.VehicleGuns
 import dev.vehicleguns.api.ArmedVehicle
 import dev.vehicleguns.api.MachineGunSpec
-import dev.vehicleguns.api.Turret
 import dev.vehicleguns.api.entity
 import dev.vehicleguns.ballistics.Ballistics
 import dev.vehicleguns.ballistics.VehicleFrame
 import dev.vehicleguns.entity.GunDamage
-import net.minecraft.nbt.CompoundTag
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.util.RandomSource
 import net.minecraft.world.entity.Entity
@@ -105,7 +103,7 @@ internal object MachineGuns {
             land(level, vehicle, spec, mg, now)
         }
         if (vehicle.turretSpec.heat != null && heat(vehicle, gun)) changed = true
-        if (changed) publish(vehicle.turret, gun)
+        if (changed) gun.weaponsChanged = true
     }
 
     private const val LEAD_PASSES = 2
@@ -198,17 +196,4 @@ internal object MachineGuns {
     }
 
     private const val HEAT_STEPS = 50.0
-
-    /** What clients draw: each gun's shots, where its last bullet went and its lie; and the heat. */
-    private fun publish(turret: Turret, gun: Gunnery) {
-        turret.machineGuns = CompoundTag().apply {
-            putIntArray(Turret.SHOTS, IntArray(gun.machineGuns.size) { gun.machineGuns[it].shots })
-            for ((i, mg) in gun.machineGuns.withIndex()) {
-                mg.lastEnd?.let { putDouble("${Turret.END_X}$i", it.x); putDouble("${Turret.END_Y}$i", it.y); putDouble("${Turret.END_Z}$i", it.z) }
-                mg.lie?.let { putFloat("${Turret.LIE_X}$i", it.x.toFloat()); putFloat("${Turret.LIE_Y}$i", it.y.toFloat()); putFloat("${Turret.LIE_Z}$i", it.z.toFloat()) }
-            }
-            putFloat(Turret.HEAT, gun.heat.toFloat())
-            putBoolean(Turret.COOLING, gun.cooling)
-        }
-    }
 }

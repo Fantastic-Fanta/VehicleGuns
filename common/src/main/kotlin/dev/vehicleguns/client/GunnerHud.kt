@@ -31,6 +31,7 @@ object GunnerHud {
         reticle(graphics, vehicle, cx, cy, now)
         hitMarker(graphics, cx, cy, now)
         heatBar(graphics, vehicle, cx, cy)
+        staminaBar(graphics, vehicle, cx, cy)
         compass(graphics, vehicle, cx, now)
         roundOffScreen(graphics, now)
     }
@@ -100,11 +101,21 @@ object GunnerHud {
         if (vehicle.turretSpec.machineGuns.isEmpty() || vehicle.turretSpec.heat == null) return
         val heat = vehicle.turret.heat
         if (heat >= 1f && !GunnerClient.machineGunsHeld) return
-        val y = cy + HEAT_BAR_Y
+        bar(graphics, cx, cy + HEAT_BAR_Y, heat, if (vehicle.turret.overheated) AMBER else WHITE)
+    }
+
+    /** The seekers' stamina under the heat bar, while it is not full or their key is held: blue, amber while spent. */
+    private fun staminaBar(graphics: GuiGraphics, vehicle: ArmedVehicle, cx: Int, cy: Int) {
+        if (vehicle.turretSpec.seekers == null) return
+        val stamina = vehicle.turret.seekerStamina
+        if (stamina >= 1f && !GunnerClient.seekersHeld) return
+        bar(graphics, cx, cy + STAMINA_BAR_Y, stamina, if (vehicle.turret.seekersSpent) AMBER else INCOMING)
+    }
+
+    private fun bar(graphics: GuiGraphics, cx: Int, y: Int, share: Float, colour: Int) {
         val half = HEAT_BAR_WIDTH / 2
         graphics.fill(cx - half - 1, y - 1, cx + half + 1, y + 2, 0x80000000.toInt())
-        val filled = Math.round(HEAT_BAR_WIDTH * heat.coerceIn(0f, 1f))
-        graphics.fill(cx - half, y, cx - half + filled, y + 1, if (vehicle.turret.overheated) AMBER else WHITE)
+        graphics.fill(cx - half, y, cx - half + Math.round(HEAT_BAR_WIDTH * share.coerceIn(0f, 1f)), y + 1, colour)
     }
 
     /** A compass tape along the top while the view or the turret turns: north as 0, the turret's bearing marked under it. */
@@ -176,6 +187,7 @@ object GunnerHud {
     private const val REFUSED_SECONDS = 0.35
     private const val HEAT_BAR_Y = 18
     private const val HEAT_BAR_WIDTH = 25
+    private const val STAMINA_BAR_Y = 22
     private const val COMPASS_HOLD = 1.5
     private const val COMPASS_FADE = 0.5
 }

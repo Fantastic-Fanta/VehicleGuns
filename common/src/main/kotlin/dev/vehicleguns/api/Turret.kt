@@ -116,6 +116,12 @@ class Turret(private val vehicle: Entity, private val sync: TurretSync) {
     /** Spent, the machine guns cool until full before they fire by hand again. */
     val overheated: Boolean get() = machineGuns.getBoolean(COOLING)
 
+    /** The seekers' stamina left, 1 full. */
+    val seekerStamina: Float get() = if (machineGuns.contains(STAMINA)) machineGuns.getFloat(STAMINA) else 1f
+
+    /** Spent, no seeker goes until the stamina is back far enough. */
+    val seekersSpent: Boolean get() = machineGuns.getBoolean(SPENT)
+
     private var traverseO = 0f
     private var elevationO = 0f
     private var lieO: Array<Vec3?> = emptyArray()
@@ -151,5 +157,7 @@ class Turret(private val vehicle: Entity, private val sync: TurretSync) {
         const val LIE_Z = "lz"
         const val HEAT = "h"
         const val COOLING = "c"
+        const val STAMINA = "st"
+        const val SPENT = "sp"
     }
 }

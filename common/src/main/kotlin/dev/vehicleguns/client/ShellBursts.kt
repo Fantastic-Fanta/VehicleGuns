@@ -55,6 +55,14 @@ object ShellBursts {
         if (flashHere > flashNow(now)) { flash = flashHere; flashNanos = now }
     }
 
+    /** Another blast felt here: the view shaken up to [most] degrees, falling off to nothing [reach] blocks from [at]. */
+    fun feel(at: Vec3, most: Double, reach: Double) {
+        val distance = Minecraft.getInstance().gameRenderer.mainCamera.position.distanceTo(at)
+        val now = System.nanoTime()
+        val here = (1.0 - distance / reach).coerceIn(0.0, 1.0).pow(2) * most
+        if (here > shakeNow(now)) { shake = here; shakeNanos = now }
+    }
+
     /** The gunner's own round has landed: a small thump in the view, however far off. */
     fun thump() {
         val now = System.nanoTime()
@@ -65,6 +73,8 @@ object ShellBursts {
     private fun flashNow(now: Long) = flash * exp(-((now - flashNanos) / 1.0e9) / FLASH_FADE)
 
     /** Heard late by its distance: a boom, a crack close by, a far rumble; a splash and the column falling back, or the ground broken. */
+    // NeoForge deprecates BlockState.soundType for its level-aware overload, which Fabric does not have.
+    @Suppress("DEPRECATION")
     private fun sounds(mc: Minecraft, at: Vec3, water: Boolean, ground: BlockState?, distance: Double) {
         val random = RandomSource.create()
         val late = (distance / SOUND_SPEED * 20.0).toInt()

@@ -3,6 +3,7 @@ package dev.vehicleguns.fabric
 import dev.vehicleguns.VehicleGuns
 import dev.vehicleguns.client.GunBoatRenderer
 import dev.vehicleguns.client.MagazineScreen
+import dev.vehicleguns.client.SeekerRenderer
 import dev.vehicleguns.client.VehicleGunsClient
 import dev.vehicleguns.network.Clientbound
 import dev.vehicleguns.network.Net
@@ -24,6 +25,7 @@ object VehicleGunsFabricClient : ClientModInitializer {
         MenuScreens.register(VehicleGuns.MAGAZINE_MENU, ::MagazineScreen)
         EntityRendererRegistry.register(VehicleGuns.SHELL) { ThrownItemRenderer(it, 1.25f, false) }
         EntityRendererRegistry.register(VehicleGuns.GUN_BOAT) { GunBoatRenderer(it) }
+        EntityRendererRegistry.register(VehicleGuns.SEEKER) { SeekerRenderer(it) }
         VehicleGunsClient.KEYS.forEach { KeyBindingHelper.registerKeyBinding(it) }
         ClientTickEvents.END_CLIENT_TICK.register { VehicleGunsClient.tick() }
         WorldRenderEvents.AFTER_ENTITIES.register { context ->

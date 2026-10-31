@@ -3,8 +3,10 @@ package dev.vehicleguns.client
 import com.mojang.blaze3d.platform.InputConstants
 import dev.vehicleguns.GunSettings
 import dev.vehicleguns.api.ArmedVehicle
+import dev.vehicleguns.api.SeekerSpec
 import dev.vehicleguns.api.entity
 import dev.vehicleguns.ballistics.Ballistics
+import dev.vehicleguns.entity.SeekerEntity
 import dev.vehicleguns.gun.Aiming
 import dev.vehicleguns.gun.LayCache
 import dev.vehicleguns.gun.Turrets
@@ -12,6 +14,7 @@ import dev.vehicleguns.network.GunAimPayload
 import dev.vehicleguns.network.GunFirePayload
 import dev.vehicleguns.network.GunHitPayload
 import dev.vehicleguns.network.GunMachinePayload
+import dev.vehicleguns.network.GunSeekerPayload
 import dev.vehicleguns.network.GunSteadyPayload
 import dev.vehicleguns.network.Net
 import net.minecraft.client.CameraType
@@ -52,6 +55,14 @@ object GunnerClient {
 
     /** Whether the machine guns' key is held now, for the sight. */
     internal var machineGunsHeld = false
+
+    /** Held, the seekers launch at what the gunner marks ([seekerKey]). */
+    @JvmField
+    val SEEKER_KEY = KeyMapping("key.vehicleguns.seekers", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, "key.categories.vehicleguns")
+
+    /** What the seekers would go at now, bracketed on the screen while their key is held; and whether it is. */
+    internal var marked: Entity? = null
+    internal var seekersHeld = false
 
     /** The vehicle the local player is gunner of, or null. */
     @JvmStatic
@@ -354,6 +365,36 @@ object GunnerClient {
         wasKept = kept
         buttons(vehicle)
         machineGunKey(vehicle, player, level)
+        seekerKey(vehicle, player, level)
+    }
+
+    /**
+     * The seekers' key, held: said to the server every tick with what the gunner marks, the locked target, else the
+     * creature under the crosshair, else the one nearest it within [SEEK_CONE]; one a round of its kind may make for
+     * (in the water for a torpedo, not wholly under it for a missile). -1 for none: the server then looks near the sight.
+     */
+    private fun seekerKey(vehicle: ArmedVehicle, player: Player, level: Level) {
+        val spec = vehicle.turretSpec.seekers
+        seekersHeld = spec != null && SEEKER_KEY.isDown && Minecraft.getInstance().screen == null
+        if (spec == null || !seekersHeld) { marked = null; return }
+        val ship = vehicle.entity
+        val reach = spec.range + MARK_SLACK
+        fun fits(e: Entity): Boolean = e.isAlive && e !== player && e !== ship && e.rootVehicle !== ship && vehicle.targetRules.gunnerMayHit(e) &&
+            (if (spec.kind == SeekerSpec.Kind.TORPEDO) e.isInWater else !SeekerEntity.submerged(level, e)) && e.distanceTo(player) <= reach
+        val eye = camera(vehicle, player.yRot, player.xRot, 1f)
+        val look = player.lookAngle
+        marked = locked?.takeIf { fits(it) } ?: run {
+            val end = eye.add(look.scale(reach))
+            val wall = level.clip(ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)).let { if (it.type == HitResult.Type.MISS) end else it.location }
+            ProjectileUtil.getEntityHitResult(level, player, eye, wall, AABB(eye, wall).inflate(1.0)) { it.isPickable && fits(it) }?.entity
+        } ?: run {
+            val cone = Math.cos(Math.toRadians(SEEK_CONE))
+            level.getEntitiesOfClass(LivingEntity::class.java, AABB(eye, eye).inflate(reach)) { fits(it) }
+                .map { it to it.boundingBox.center.subtract(eye).normalize().dot(look) }
+                .filter { it.second >= cone }
+                .maxByOrNull { it.second }?.first
+        }
+        if (!vehicle.turret.seekersSpent) Net.toServer(GunSeekerPayload(ship.id, marked?.id ?: -1))
     }
 
     /**
@@ -397,8 +438,13 @@ object GunnerClient {
             viewBefore = mc.options.cameraType
             mc.options.cameraType = CameraType.FIRST_PERSON
         }
-        val hint = if (vehicle.turretSpec.machineGuns.isEmpty()) Component.translatable("message.vehicleguns.hint", LOCK_KEY.translatedKeyMessage)
-            else Component.translatable("message.vehicleguns.hint_machine_guns", LOCK_KEY.translatedKeyMessage, MACHINE_GUN_KEY.translatedKeyMessage)
+        // The same short hint at every gun: its own keys only, the mouse's found by trying them.
+        val hint = Component.translatable("message.vehicleguns.hint", LOCK_KEY.translatedKeyMessage)
+        if (vehicle.turretSpec.machineGuns.isNotEmpty()) hint.append(Component.translatable("message.vehicleguns.hint.machine_guns", MACHINE_GUN_KEY.translatedKeyMessage))
+        vehicle.turretSpec.seekers?.let {
+            val kind = if (it.kind == SeekerSpec.Kind.TORPEDO) "torpedoes" else "missiles"
+            hint.append(Component.translatable("message.vehicleguns.hint.$kind", SEEKER_KEY.translatedKeyMessage))
+        }
         player.displayClientMessage(hint, true)
     }
 
@@ -407,7 +453,7 @@ object GunnerClient {
         viewBefore = null
         boarded = null
         aim = null; lands = null; path = emptyList(); flying = null; flyingPath = emptyList()
-        zoomed = false; wasKept = false; wasAt = null; locked = null; lob = false; machineGunsHeld = false
+        zoomed = false; wasKept = false; wasAt = null; locked = null; lob = false; machineGunsHeld = false; seekersHeld = false; marked = null
         triggerHeld = false; useMouse = false; triggerMouse = false; attackKeyWas = false
         roundsWas = -1; shotsSeen = -1; steadySent = false; aimSent = null
         layCache.clear()
@@ -484,6 +530,9 @@ object GunnerClient {
     private const val LEAD_PASSES = 2
     /** Locking with the crosshair not quite on a creature takes the one nearest it within this many degrees. */
     private const val LOCK_CONE = 6.0
+    /** Seekers with nothing under the crosshair mark the creature nearest it within this many degrees, this far past their range. */
+    private const val SEEK_CONE = 10.0
+    private const val MARK_SLACK = 8.0
     /** Held, the trigger is pulled again no sooner than this after the last pull or shot, seconds. */
     private const val REPULL_SECONDS = 0.3
     /** A pull with more than this of loading left is too soon, seconds. */

@@ -33,12 +33,14 @@ object Net {
     val CLIENTBOUND: List<Clientbound<*>> = listOf(
         Clientbound(GunHitPayload.TYPE, GunHitPayload.CODEC) { dev.vehicleguns.client.GunnerClient.hit(it) },
         Clientbound(ShellBurstPayload.TYPE, ShellBurstPayload.CODEC) { dev.vehicleguns.client.ShellBursts.start(it) },
+        Clientbound(TorpedoBurstPayload.TYPE, TorpedoBurstPayload.CODEC) { dev.vehicleguns.client.TorpedoFx.burst(it) },
     )
 
     val SERVERBOUND: List<Serverbound<*>> = listOf(
         Serverbound(GunFirePayload.TYPE, GunFirePayload.CODEC) { p, player -> Turrets.fireByGunner(player, p.vehicle) },
         Serverbound(GunAimPayload.TYPE, GunAimPayload.CODEC) { p, player -> Turrets.aimByGunner(player, p.vehicle, Vec3(p.x, p.y, p.z)) },
         Serverbound(GunMachinePayload.TYPE, GunMachinePayload.CODEC) { p, player -> Turrets.machineGunByGunner(player, p.vehicle, Vec3(p.x, p.y, p.z)) },
+        Serverbound(GunSeekerPayload.TYPE, GunSeekerPayload.CODEC) { p, player -> Turrets.seekersByGunner(player, p.vehicle, p.mark) },
         Serverbound(GunSteadyPayload.TYPE, GunSteadyPayload.CODEC) { p, player -> Turrets.steadyByGunner(player, p.vehicle, p.steady) },
     )
 }

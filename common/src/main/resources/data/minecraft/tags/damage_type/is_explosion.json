@@ -1,4 +1,4 @@
 {
   "replace": false,
-  "values": ["vehicleguns:shell"]
+  "values": ["vehicleguns:shell", "vehicleguns:seeker"]
 }

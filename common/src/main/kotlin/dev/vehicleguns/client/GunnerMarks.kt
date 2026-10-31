@@ -52,6 +52,11 @@ object GunnerMarks {
                 line(out, pose, path[i - 1].subtract(eye), path[i].subtract(eye), r, g, b, alpha / 2)
             }
         }
+        // What the seekers would go at, while their key is held and it is not the lock (that has its own).
+        GunnerClient.marked?.takeIf { it !== GunnerClient.locked && GunnerClient.seekersHeld }?.let { mark ->
+            val (mr, mg, mb) = GunnerHud.rgb(MARK)
+            brackets(out, pose, camera, mark, eye, mr, mg, mb)
+        }
         GunnerClient.locked?.let { target ->
             val (lr, lg, lb) = GunnerHud.rgb(LOCK)
             brackets(out, pose, camera, target, eye, lr, lg, lb)
@@ -117,6 +122,8 @@ object GunnerMarks {
     private val CORNERS = listOf(-1.0 to -1.0, 1.0 to -1.0, -1.0 to 1.0, 1.0 to 1.0)
     /** A lock's colour: an orange red, apart from the lay's own. */
     private const val LOCK = 0xFFFF7A3C.toInt()
+    /** A seeker's mark: the incoming round's blue. */
+    private const val MARK = 0xFF78C8FF.toInt()
     private const val RING = 1.0
     /** A ring is at least this share of its distance across, so it keeps its size on the screen. */
     private const val RING_PER_BLOCK = 0.03

@@ -59,6 +59,21 @@ class Gunnery {
     var heat = 1.0
     var cooling = false
 
+    // The seekers.
+    /** Until when the gunner holds their key, and what they mark (an entity id, -1 for none). */
+    var seekUntil = NEVER
+    var seekMark = -1
+    /** What they go at guarding on their own, when the last went and which launcher is next. */
+    var seekTarget = -1
+    var seekFiredAt = NEVER
+    var seekNext = 0
+    /** Stamina left, 1 full, and whether, spent, none go until it is back far enough. */
+    var stamina = 1.0
+    var spent = false
+
+    /** Something clients draw (machine guns, heat, stamina) changed this tick: sent once at its end ([WeaponSync]). */
+    var weaponsChanged = false
+
     /** What the gun makes of [mob] now, sighted once a tick however many guns watch it. */
     fun track(mob: net.minecraft.world.entity.Entity, now: Long): TargetTrack {
         val seen = Aiming.aimPoint(mob)
@@ -85,6 +100,7 @@ class Gunnery {
         pullUntil = NEVER
         steady = false
         machineGunAim = null
+        seekUntil = NEVER
     }
 
     fun dropTarget() {

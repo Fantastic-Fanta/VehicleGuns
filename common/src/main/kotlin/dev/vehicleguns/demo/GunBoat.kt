@@ -7,6 +7,7 @@ import dev.vehicleguns.api.GuardSpec
 import dev.vehicleguns.api.MachineGunSpec
 import dev.vehicleguns.api.Magazine
 import dev.vehicleguns.api.RoundSpec
+import dev.vehicleguns.api.SeekerSpec
 import dev.vehicleguns.api.Turret
 import dev.vehicleguns.api.TurretSpec
 import dev.vehicleguns.api.TurretSync
@@ -27,7 +28,7 @@ import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
 
 /**
- * The reference vehicle: a boat with a gun on its bow and a machine gun either side. Alone aboard, a player both
+ * The reference vehicle: a boat with a gun on its bow, a machine gun either side and two torpedo tubes. Alone aboard, a player both
  * steers it and lays the guns; with two aboard, whoever sits behind is the gunner. With no player aboard the guns guard
  * on their own. The main gun fires fire charges from the boat's magazine, except in creative: the gunner opens it with
  * their inventory key, anyone with a sneak-click and an empty hand, and a sneak-click with fire charges loads them.
@@ -101,6 +102,7 @@ class GunBoat(type: EntityType<out GunBoat>, level: Level) : Boat(type, level), 
             guard = GuardSpec(range = 24.0),
             camera = CameraSpec(back = 7.0, up = 1.0, rise = 1.8),
             machineGuns = listOf(SIDE_GUN.mirrored(), SIDE_GUN),
+            seekers = SeekerSpec(SeekerSpec.Kind.TORPEDO, launchers = listOf(Vec3(0.7, -0.25, -0.4), Vec3(0.7, 0.25, -0.4))),
         )
     }
 }

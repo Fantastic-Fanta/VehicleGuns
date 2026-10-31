@@ -12,6 +12,7 @@ Demos: [Blastoise](https://gyazo.com/bfa89033004447d7f4f96d74b3f3dfc9), [Lapras]
 - Guard mode: auto-targets hostile mobs, no block damage
 - Explosive shells with staged burst effects
 - Machine guns: hitscan mounts with cones, guard bursts, full auto under the gunner's key, heat, tracers
+- Torpedoes and missiles: homing rounds with launchers, marking, stamina, wake and underwater bursts
 - Magazine: a vehicle ammo store opened with the gunner's inventory key
 
 ## Maths
@@ -23,6 +24,7 @@ Demos: [Blastoise](https://gyazo.com/bfa89033004447d7f4f96d74b3f3dfc9), [Lapras]
 - **Mount:** each axis is limited in both acceleration `a` and speed. It runs at the fastest speed that can still stop in the remaining gap `d`, `(√(a² + 8a·d) − a)/2`, on top of the target's own angular rate.
 - **Tracking:** alpha-beta filter, `α = 0.5`, `β = α²/(2 − α)` (critically damped).
 - **Machine guns:** each mount turns along a great circle at a fixed rate, within a cone round its rest direction. It leads by `d / bulletSpeed` ticks of tracked velocity. A bullet lands after the same delay on whatever is first on its line, up to `spread`° off the barrel, spread evenly over the cone.
+- **Torpedoes and missiles:** each tick a round turns up to `turn`° along the great circle onto its mark's tracked point, gathering `0.12·speed` a tick up to `speed`. A torpedo's pitch is capped at ±22° and it is held under the water's face; a missile runs at 0.45× speed until it leaves water. A lost mark is replaced by the nearest valid one within 50° of its heading. The burst does `damage` to what it hits and `splash·(1 − r/radius)` around.
 - **Rider clearance:** the floor at each bearing is the lowest elevation whose barrel segment misses every rider column. The swing takes whichever way costs less traverse time plus extra lift time.
 
 ## Usage
@@ -49,7 +51,9 @@ Draw the turret at `turret.traverse(partial)` and `turret.elevation(partial)`.
 | `targetRules` | guard: hostile mobs; gunner: any living thing |
 | `Turrets.wantsSteady` | true while the gunner zooms or locks on |
 
-`TurretSpec` configures geometry, mount speeds, rounds, guard, camera, machine guns and heat. `GunSettings` holds global toggles.
+`TurretSpec` configures geometry, mount speeds, rounds, guard, camera, machine guns, heat and seekers.
+
+Keys: attack fires, use zooms, C locks on, X machine guns, V torpedoes or missiles. `GunSettings` holds global toggles.
 
 ## Layout
 
@@ -57,10 +61,10 @@ Draw the turret at `turret.traverse(partial)` and `turret.elevation(partial)`.
 | --- | --- |
 | `common/.../ballistics` | flight, lead, arcs, mount axes, tracking, vehicle frame |
 | `common/.../api` | `ArmedVehicle`, `Turret`, `TurretSpec`, `TargetRules`, `Magazine` |
-| `common/.../gun` | server gunnery, machine guns, shared aiming |
-| `common/.../entity` | shell, damage source |
+| `common/.../gun` | server gunnery, machine guns, seekers, shared aiming |
+| `common/.../entity` | shell, homing round, damage source |
 | `common/.../menu` | magazine menu |
-| `common/.../client` | input, camera, sight, HUD, tracers, effects, magazine screen |
+| `common/.../client` | input, camera, sight, HUD, tracers, torpedo and burst effects, renderers, magazine screen |
 | `common/.../demo` | Gun Boat (Tools & Utilities tab) |
 | `neoforge`, `fabric` | loader entry points |
 | `neoforge/src/test` | ballistics unit tests |
